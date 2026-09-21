@@ -1,7 +1,7 @@
-// Mock database for development
-// This allows the app to work without PostgreSQL or Supabase setup
+// Mock database for development - loads from products.json
+import productsData from './products.json'
 
-interface Product {
+export interface Product {
   id: string
   name: string
   description: string
@@ -9,67 +9,14 @@ interface Product {
   rating: number
   reviews: number
   website?: string
+  features?: string[]
+  pricing?: string
+  founded?: number
 }
 
 // In-memory database (persists during app runtime)
-let products: Product[] = [
-  {
-    id: '1',
-    name: 'Stripe',
-    description: 'Payment processing platform for internet businesses',
-    category: 'Payments',
-    rating: 4.8,
-    reviews: 250,
-    website: 'https://stripe.com',
-  },
-  {
-    id: '2',
-    name: 'Notion',
-    description: 'All-in-one workspace for notes and collaboration',
-    category: 'Productivity',
-    rating: 4.7,
-    reviews: 320,
-    website: 'https://notion.so',
-  },
-  {
-    id: '3',
-    name: 'Figma',
-    description: 'Collaborative interface design tool',
-    category: 'Design',
-    rating: 4.9,
-    reviews: 280,
-    website: 'https://figma.com',
-  },
-  {
-    id: '4',
-    name: 'Slack',
-    description: 'Business messaging and collaboration platform',
-    category: 'Communication',
-    rating: 4.6,
-    reviews: 450,
-    website: 'https://slack.com',
-  },
-  {
-    id: '5',
-    name: 'Linear',
-    description: 'Issue tracking for modern software teams',
-    category: 'Project Management',
-    rating: 4.8,
-    reviews: 190,
-    website: 'https://linear.app',
-  },
-  {
-    id: '6',
-    name: 'Vercel',
-    description: 'Frontend cloud platform for deployment',
-    category: 'Developer Tools',
-    rating: 4.7,
-    reviews: 210,
-    website: 'https://vercel.com',
-  },
-]
-
-let nextId = 7
+let products: Product[] = productsData as Product[]
+let nextId = Math.max(...products.map(p => parseInt(p.id))) + 1
 
 export function getAllProducts(): Product[] {
   return products
@@ -77,6 +24,19 @@ export function getAllProducts(): Product[] {
 
 export function getProductById(id: string): Product | undefined {
   return products.find(p => p.id === id)
+}
+
+export function getProductsByCategory(category: string): Product[] {
+  return products.filter(p => p.category.toLowerCase() === category.toLowerCase())
+}
+
+export function searchProducts(query: string): Product[] {
+  const lowerQuery = query.toLowerCase()
+  return products.filter(p =>
+    p.name.toLowerCase().includes(lowerQuery) ||
+    p.description.toLowerCase().includes(lowerQuery) ||
+    p.features?.some(f => f.toLowerCase().includes(lowerQuery))
+  )
 }
 
 export function createProduct(product: Omit<Product, 'id'>): Product {
@@ -91,7 +51,7 @@ export function createProduct(product: Omit<Product, 'id'>): Product {
 export function updateProduct(id: string, updates: Partial<Product>): Product | undefined {
   const index = products.findIndex(p => p.id === id)
   if (index === -1) return undefined
-  
+
   products[index] = { ...products[index], ...updates }
   return products[index]
 }
@@ -99,7 +59,28 @@ export function updateProduct(id: string, updates: Partial<Product>): Product | 
 export function deleteProduct(id: string): boolean {
   const index = products.findIndex(p => p.id === id)
   if (index === -1) return false
-  
+
   products.splice(index, 1)
   return true
+}
+
+export function getCategories(): string[] {
+  return [...new Set(products.map(p => p.category))].sort()
+}
+
+export function getStats() {
+  return {
+    totalProducts: products.length,
+    totalCategories: getCategories().length,
+    averageRating: (products.reduce((sum, p) => sum + p.rating, 0) / products.length).toFixed(1),
+    totalReviews: products.reduce((sum, p) => sum + p.reviews, 0),
+  }
+}
+
+export function getTopRatedProducts(limit: number = 10): Product[] {
+  return [...products].sort((a, b) => b.rating - a.rating).slice(0, limit)
+}
+
+export function getMostReviewedProducts(limit: number = 10): Product[] {
+  return [...products].sort((a, b) => b.reviews - a.reviews).slice(0, limit)
 }
