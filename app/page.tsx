@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import productsData from '@/lib/products.json'
 
@@ -14,15 +14,13 @@ interface Product {
   website?: string
 }
 
+// Calculate at build time
+const categories = [...new Set(productsData.map((p: Product) => p.category))].sort() as string[]
+const avgRating = (productsData.reduce((sum: number, p: Product) => sum + p.rating, 0) / productsData.length).toFixed(1)
+
 export default function Home() {
   const [search, setSearch] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('')
-  const [categories, setCategories] = useState<string[]>([])
-
-  useEffect(() => {
-    const cats = [...new Set(productsData.map((p: Product) => p.category))].sort()
-    setCategories(cats as string[])
-  }, [])
 
   const filteredProducts = productsData.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -95,9 +93,7 @@ export default function Home() {
               <div className="text-gray-600 font-medium">Categories</div>
             </div>
             <div>
-              <div className="text-5xl font-bold text-blue-600 mb-2">
-                {(productsData.reduce((sum, p: Product) => sum + p.rating, 0) / productsData.length).toFixed(1)}
-              </div>
+              <div className="text-5xl font-bold text-blue-600 mb-2">{avgRating}</div>
               <div className="text-gray-600 font-medium">Avg Rating</div>
             </div>
           </div>
