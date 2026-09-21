@@ -1,8 +1,5 @@
-'use client'
-
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import productsData from '@/lib/products.json'
 
 interface Product {
   id: string
@@ -17,47 +14,56 @@ interface Product {
   founded?: number
 }
 
-export default function ProductPage() {
-  const params = useParams()
-  const [product, setProduct] = useState<Product | null>(null)
-  const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(true)
+export async function generateStaticParams() {
+  return productsData.map((product: Product) => ({
+    id: product.id,
+  }))
+}
 
-  useEffect(() => {
-    if (params.id) {
-      fetchProduct()
-    }
-  }, [params.id])
-
-  const fetchProduct = async () => {
-    try {
-      const res = await fetch(`/api/products/${params.id}`)
-      if (!res.ok) throw new Error('Product not found')
-      const data = await res.json()
-      setProduct(data)
-
-      const allRes = await fetch('/api/products')
-      const allData = await allRes.json()
-      const related = allData
-        .filter((p: Product) => p.category === data.category && p.id !== data.id)
-        .slice(0, 3)
-      setRelatedProducts(related)
-    } catch (error) {
-      console.error('Failed to fetch product:', error)
-    } finally {
-      setLoading(false)
-    }
+export function generateMetadata({ params }: { params: { id: string } }) {
+  const product = productsData.find((p: Product) => p.id === params.id)
+  return {
+    title: product ? `${product.name} - SaaSHub` : 'Product Not Found',
+    description: product?.description || 'Discover SaaS products on SaaSHub',
   }
+}
 
-  if (loading) return <div className="text-center py-12"><div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div><p className="mt-4 text-gray-600">Loading...</p></div>
-  if (!product) return <div className="text-center py-12"><p className="text-lg">Product not found</p></div>
+export default function ProductPage({ params }: { params: { id: string } }) {
+  const product = productsData.find((p: Product) => p.id === params.id)
+  const relatedProducts = productsData
+    .filter((p: Product) => p.category === product?.category && p.id !== params.id)
+    .slice(0, 3)
+
+  if (!product) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <header className="sticky top-0 bg-white border-b border-gray-200 z-50 shadow-sm">
+          <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <Link href="/" className="text-3xl font-bold text-blue-600">
+              SaaSHub
+            </Link>
+            <Link href="/" className="text-gray-600 hover:text-blue-600 font-medium">
+              ← Back
+            </Link>
+          </nav>
+        </header>
+        <div className="text-center py-12">
+          <p className="text-lg">Product not found</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="sticky top-0 bg-white border-b border-gray-200 z-50 shadow-sm">
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <Link href="/" className="text-3xl font-bold text-blue-600">SaaSHub</Link>
-          <Link href="/" className="text-gray-600 hover:text-blue-600 font-medium">← Back</Link>
+          <Link href="/" className="text-3xl font-bold text-blue-600">
+            SaaSHub
+          </Link>
+          <Link href="/" className="text-gray-600 hover:text-blue-600 font-medium">
+            ← Back
+          </Link>
         </nav>
       </header>
 
@@ -67,9 +73,19 @@ export default function ProductPage() {
             <div className="flex-1">
               <h1 className="text-5xl font-bold text-gray-900 mb-4">{product.name}</h1>
               <div className="flex gap-2 flex-wrap mb-6">
-                <span className="bg-blue-600 text-white px-4 py-1 rounded-full text-sm font-medium">{product.category}</span>
-                {product.pricing && <span className="bg-green-100 text-green-800 px-4 py-1 rounded-full text-sm font-medium">{product.pricing}</span>}
-                {product.founded && <span className="bg-gray-100 text-gray-800 px-4 py-1 rounded-full text-sm font-medium">Founded {product.founded}</span>}
+                <span className="bg-blue-600 text-white px-4 py-1 rounded-full text-sm font-medium">
+                  {product.category}
+                </span>
+                {product.pricing && (
+                  <span className="bg-green-100 text-green-800 px-4 py-1 rounded-full text-sm font-medium">
+                    {product.pricing}
+                  </span>
+                )}
+                {product.founded && (
+                  <span className="bg-gray-100 text-gray-800 px-4 py-1 rounded-full text-sm font-medium">
+                    Founded {product.founded}
+                  </span>
+                )}
               </div>
               <p className="text-lg text-gray-700 max-w-2xl">{product.description}</p>
             </div>
@@ -85,7 +101,12 @@ export default function ProductPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {product.website && (
           <div className="mb-12">
-            <a href={product.website} target="_blank" rel="noopener noreferrer" className="inline-block bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 font-semibold text-lg">
+            <a
+              href={product.website}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 font-semibold text-lg"
+            >
               Visit {product.name} →
             </a>
           </div>
@@ -126,10 +147,22 @@ export default function ProductPage() {
         <section className="mb-12 bg-blue-50 border-2 border-blue-200 rounded-lg p-8">
           <h2 className="text-3xl font-bold mb-4">Why Choose {product.name}?</h2>
           <ul className="space-y-3">
-            <li className="flex gap-3"><span className="text-blue-600 font-bold">→</span><span>Highly rated by {product.reviews.toLocaleString()}+ users worldwide</span></li>
-            <li className="flex gap-3"><span className="text-blue-600 font-bold">→</span><span>{product.pricing} pricing - transparent and scalable</span></li>
-            <li className="flex gap-3"><span className="text-blue-600 font-bold">→</span><span>Trusted solution in {product.category}</span></li>
-            <li className="flex gap-3"><span className="text-blue-600 font-bold">→</span><span>Industry-leading features</span></li>
+            <li className="flex gap-3">
+              <span className="text-blue-600 font-bold">→</span>
+              <span>Highly rated by {product.reviews.toLocaleString()}+ users worldwide</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="text-blue-600 font-bold">→</span>
+              <span>{product.pricing} pricing - transparent and scalable</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="text-blue-600 font-bold">→</span>
+              <span>Trusted solution in {product.category}</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="text-blue-600 font-bold">→</span>
+              <span>Industry-leading features</span>
+            </li>
           </ul>
         </section>
 
@@ -137,7 +170,7 @@ export default function ProductPage() {
           <section className="mb-12">
             <h2 className="text-3xl font-bold mb-6">Similar Products in {product.category}</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {relatedProducts.map(related => (
+              {relatedProducts.map((related) => (
                 <Link key={related.id} href={`/product/${related.id}`}>
                   <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition cursor-pointer">
                     <h3 className="text-xl font-semibold mb-2">{related.name}</h3>
