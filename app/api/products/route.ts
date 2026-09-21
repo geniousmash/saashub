@@ -1,14 +1,9 @@
-import { sql } from '@/lib/db'
+import { getAllProducts, createProduct } from '@/lib/mock-db'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
   try {
-    const products = await sql`
-      SELECT id, name, description, category, rating, reviews, website
-      FROM products
-      ORDER BY rating DESC
-      LIMIT 100
-    `
+    const products = getAllProducts()
     return NextResponse.json(products)
   } catch (error) {
     console.error('Database error:', error)
@@ -25,15 +20,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const result = await sql`
-      INSERT INTO products (name, description, category, website, rating, reviews)
-      VALUES (${name}, ${description}, ${category}, ${website || null}, 0, 0)
-      RETURNING id, name, description, category, rating, reviews, website
-    `
+    const product = createProduct({
+      name,
+      description,
+      category,
+      website: website || undefined,
+      rating: 0,
+      reviews: 0,
+    })
 
-    return NextResponse.json(result[0], { status: 201 })
+    return NextResponse.json(product, { status: 201 })
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json({ error: 'Failed to create product' }, { status: 500 })
   }
 }
+
