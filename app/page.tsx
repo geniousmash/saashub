@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import productsData from '@/lib/products.json'
 
 interface Product {
   id: string
@@ -14,49 +15,34 @@ interface Product {
 }
 
 export default function Home() {
-  const [products, setProducts] = useState<Product[]>([])
   const [search, setSearch] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('')
-  const [loading, setLoading] = useState(true)
   const [categories, setCategories] = useState<string[]>([])
   const [stats, setStats] = useState({ totalProducts: 0, totalCategories: 0, averageRating: '0', totalReviews: 0 })
 
   useEffect(() => {
-    fetchProducts()
+    // Extract unique categories
+    const cats = [...new Set(productsData.map((p: Product) => p.category))].sort()
+    setCategories(cats as string[])
+    
+    // Calculate stats
+    const avgRating = (productsData.reduce((sum: number, p: Product) => sum + p.rating, 0) / productsData.length).toFixed(1)
+    const totalReviews = productsData.reduce((sum: number, p: Product) => sum + p.reviews, 0)
+    setStats({
+      totalProducts: productsData.length,
+      totalCategories: cats.length,
+      averageRating: avgRating,
+      totalReviews: totalReviews,
+    })
   }, [])
 
-  const fetchProducts = async () => {
-    try {
-      const res = await fetch('/api/products')
-      const data = await res.json()
-      setProducts(data)
-      
-      // Extract unique categories
-      const cats = [...new Set(data.map((p: Product) => p.category))].sort()
-      setCategories(cats as string[])
-      
-      // Calculate stats
-      const avgRating = (data.reduce((sum: number, p: Product) => sum + p.rating, 0) / data.length).toFixed(1)
-      const totalReviews = data.reduce((sum: number, p: Product) => sum + p.reviews, 0)
-      setStats({
-        totalProducts: data.length,
-        totalCategories: cats.length,
-        averageRating: avgRating,
-        totalReviews: totalReviews,
-      })
-    } catch (error) {
-      console.error('Failed to fetch products:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const filteredProducts = products.filter(product => {
+  const filteredProducts = productsData.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(search.toLowerCase()) ||
                           product.description.toLowerCase().includes(search.toLowerCase())
     const matchesCategory = !selectedCategory || product.category === selectedCategory
     return matchesSearch && matchesCategory
   })
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -154,42 +140,36 @@ export default function Home() {
 
         {/* Results Count */}
         <div className="mb-6 text-gray-600">
-          Showing <span className="font-semibold">{filteredProducts.length}</span> of <span className="font-semibold">{products.length}</span> products
+          Showing <span className="font-semibold">{filteredProducts.length}</span> of <span className="font-semibold">{productsData.length}</span> products
         </div>
 
         {/* Products Grid */}
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="mt-4 text-gray-600">Loading products...</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProducts.length > 0 ? (
-              filteredProducts.map(product => (
-                <Link key={product.id} href={`/product/${product.id}`}>
-                  <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-xl hover:border-blue-300 transition cursor-pointer h-full">
-                    <h3 className="text-xl font-semibold mb-2 text-gray-900">{product.name}</h3>
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-3">{product.description}</p>
-                    <div className="flex justify-between items-center">
-                      <span className="inline-block bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm font-medium">
-                        {product.category}
-                      </span>
-                      <div className="text-right">
-                        <div className="text-yellow-500 font-semibold">⭐ {product.rating}</div>
-                        <div className="text-xs text-gray-500">{product.reviews} reviews</div>
-                      </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredProducts.length > 0 ? (
+            filteredProducts.map(product => (
+              <Link key={product.id} href={`/product/${product.id}`}>
+                <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-xl hover:border-blue-300 transition cursor-pointer h-full">
+                  <h3 className="text-xl font-semibold mb-2 text-gray-900">{product.name}</h3>
+                  <p className="text-gray-600 text-sm mb-4 line-clamp-3">{product.description}</p>
+                  <div className="flex justify-between items-center">
+                    <span className="inline-block bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm font-medium">
+                      {product.category}
+                    </span>
+                    <div className="text-right">
+                      <div className="text-yellow-500 font-semibold">⭐ {product.rating}</div>
+                      <div className="text-xs text-gray-500">{product.reviews} reviews</div>
                     </div>
                   </div>
-                </Link>
-              ))
-            ) : (
-              <div className="col-span-full text-center py-12">
-                <p className="text-gray-600 text-lg">No products found matching your criteria</p>
-              </div>
-            )}
-          </div>
-        )}
+                </div>
+              </Link>
+            ))
+          ) : (
+            <div className="col-span-full text-center py-12">
+              <p className="text-gray-600 text-lg">No products found matching your criteria</p>
+            </div>
+          )}
+        </div>
+
       </section>
 
       {/* Footer */}
